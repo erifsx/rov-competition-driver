@@ -45,7 +45,7 @@ void setup() {
   pinMode(BOTTOM_LEFT_INPUT, OUTPUT);
   pinMode(BACK_RIGHT_INPUT, OUTPUT);
   pinMode(BACK_LEFT_INPUT, OUTPUT);
-  Serial.begin(9600);
+  Serial.begin(19200);
 
   left_stick.x = 0.f;
   left_stick.y = 0.f;
@@ -61,17 +61,15 @@ float clamp(float x) {
   return max(-1.0, min(1.0, x));
 }
 
-
 // reads joystick values from serial in format of "j1x j1y j2x j2y"
 // and assigns them to the corresponding globals
 // and are values between [-1024, 1024]
 void get_last_command() {
-    char rawCommand[512];
-    Serial.readBytesUntil('\n', rawCommand, 512);
+    String rawCommand = Serial.readStringUntil('\n');
     Serial.println(rawCommand);
   
     StaticJsonDocument<1024> doc; // 200 is the memory capacity of the json document in bytes
-    DeserializationError error = deserializeJson(doc, rawCommand);
+    DeserializationError error = deserializeJson(doc, rawCommand.c_str());
   
     if(error) {
       Serial.println("Invalid command");
