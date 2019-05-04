@@ -11,9 +11,15 @@
 #define BACK_RIGHT_INPUT    9
 #define BACK_LEFT_INPUT     3
 
+#define INPUT_LEFT_STICK_X  A4
+#define INPUT_LEFT_STICK_Y  A3
+#define INPUT_RIGHT_STICK_X A2
+#define INPUT_RIGHT_STICK_Y A1
+
+
 #define STOPPED_MOTOR_SPEED 255
 #define FULL_MOTOR_SPEED    0
-#define DEADBAND            0.01f
+#define DEADBAND            0.07f
 float sin45 = sin(45.0 * (PI/180.0));
 float cos45 = cos(45.0 * (PI/180.0));
 
@@ -45,7 +51,7 @@ void setup() {
   pinMode(BOTTOM_LEFT_INPUT, OUTPUT);
   pinMode(BACK_RIGHT_INPUT, OUTPUT);
   pinMode(BACK_LEFT_INPUT, OUTPUT);
-  Serial.begin(19200);
+  Serial.begin(9600);
 
   left_stick.x = 0.f;
   left_stick.y = 0.f;
@@ -61,26 +67,24 @@ float clamp(float x) {
   return max(-1.0, min(1.0, x));
 }
 
+const float MAX_STICK = (1024.0/5.0 * 3.3);
+const float CENTER_STICK = (MAX_STICK /2.0);
+
+float map_analog_to_joy(float val) {
+  val = max(-CENTER_STICK, min(CENTER_STICK, ((val - CENTER_STICK)))) / CENTER_STICK;
+  if(abs(val) < DEADBAND) val = 0.0;
+  return val;
+}
+
 // reads joystick values from serial in format of "j1x j1y j2x j2y"
 // and assigns them to the corresponding globals
 // and are values between [-1024, 1024]
 void get_last_command() {
-    String rawCommand = Serial.readStringUntil('\n');
-    Serial.println(rawCommand);
-  
-    StaticJsonDocument<1024> doc; // 200 is the memory capacity of the json document in bytes
-    DeserializationError error = deserializeJson(doc, rawCommand.c_str());
-  
-    if(error) {
-      Serial.println("Invalid command");
-      return;
-    }
-    
-    left_stick.x = doc["leftStick"]["x"];
-    left_stick.y = doc["leftStick"]["y"];
-  
-    right_stick.x = doc["rightStick"]["x"];
-    right_stick.y = doc["rightStick"]["y"];
+    left_stick.x = map_analog_to_joy(analogRead(INPUT_LEFT_STICK_X));
+    left_stick.y = map_analog_to_joy(analogRead(INPUT_LEFT_STICK_Y));
+    right_stick.x = map_analog_to_joy(analogRead(INPUT_RIGHT_STICK_X));
+    right_stick.y = map_analog_to_joy(analogRead(INPUT_RIGHT_STICK_Y));
+//    
 }
 
 
@@ -93,7 +97,7 @@ void set_joined_motor_speed(int m1, int m2, float speed) {
   int m1Speed = STOPPED_MOTOR_SPEED;
   int m2Speed = STOPPED_MOTOR_SPEED; 
   
-  if(abs(speed) < DEADBAND) {
+  if(speed == 0.0) {
   } else if(speed >= 0.f) {
     m1Speed = (int) map_float(speed, 0.f, 1.f, STOPPED_MOTOR_SPEED, FULL_MOTOR_SPEED);
   } else {
